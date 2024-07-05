@@ -10,7 +10,8 @@ In Progress (🚧)
 
 ### Objective
 
-Building a minimum viable implementation that produces the same output as a sequential MapReduce applications + graceful exit of all forked threads / goroutines.
+- Minimum viable implementation that produces the same output as a sequential MapReduce application.
+- Graceful exit of all forked threads / goroutines.
 
 ### Additional References:
 

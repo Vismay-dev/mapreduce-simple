@@ -2,7 +2,11 @@ package mapreduce
 
 import (
 	"log"
+	"net"
+	"net/http"
+	"net/rpc"
 	"sync"
+	"time"
 )
 
 
@@ -17,9 +21,9 @@ const (
 
 type TaskInfo struct {
 	taskId		int
-	taskType	TaskType
 	status		TaskStatus
 	fileNames 	[]string
+	assignedAt  time.Time
 }
 
 type Coordinator struct {
@@ -32,11 +36,38 @@ type Coordinator struct {
  	reduceTasks map[int]TaskInfo
 }
 
-// func (c *Coordinator) monitorTaskAssignments() {
-// 	for {
-		
-// 	}
-// }
+
+func (c *Coordinator) monitorTaskAssignments() {
+	for {
+		c.mu.Lock()
+		if c.done {
+			c.mu.Unlock()
+			break
+		}
+
+		// check MAP tasks
+
+		// check REDUCE tasks
+	}
+	c.wg.Done()
+}
+
+func (c *Coordinator) server() {
+	rpc.HandleHTTP()
+	rpc.Register(c)
+
+	sockname := coordinatorSocket()
+
+	ln, err := net.Listen("unix", sockname)
+	if err != nil {
+		log.Fatal("error listening on designated socket: ", err)
+	}
+
+	go http.Serve(ln, nil)
+}
+
+
+// PUBLIC FUNCTIONS (API)
 
 func (c *Coordinator) Done() bool {
 	return c.done
@@ -49,7 +80,6 @@ func StartCoordinator(input_files []string) *Coordinator {
 	for i, filename := range input_files {
 		taskInfo := TaskInfo{}
 		taskInfo.taskId = i+1
-		taskInfo.taskType = MAP
 		taskInfo.status = IDLE
 		taskInfo.fileNames = []string{filename}
 		c.mapTasks[i+1] = taskInfo
@@ -58,9 +88,12 @@ func StartCoordinator(input_files []string) *Coordinator {
 	c.reduceTasks = make(map[int]TaskInfo)
 	c.done = false
 
+	c.server()
+
 	log.Printf("Started coordinator")
 
-	// go c.monitorTaskAssignments()
+	c.wg.Add(1)
+	go c.monitorTaskAssignments()
 
 	return c
 }
