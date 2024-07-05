@@ -79,7 +79,7 @@ func loadPlugin(filename string) (
 		log.Fatal("error looking plugin symbol `Reduce`: ", err)
 	}
 
-	mapf 	= xmapf.(func(string, string)   []mapreduce.KeyValue)
+	mapf 	= xmapf.(func(string, string) []mapreduce.KeyValue)
 	reducef	= xreducef.(func(string, []string) []string)
 
 	return mapf, reducef
