@@ -10,11 +10,11 @@ import (
 	"github.com/Vismay-dev/mapreduce-simple/mapreduce"
 )
 
-// usage: cmd/client/main.go xxx.so inputfiles...
+// usage: ./cmd/client/main.go xxx.so inputfiles...
 func main() {
 	if len(os.Args) < 2 {
-		log.Fatal("usage: cmd/client/main.go xxx.so inputfiles...")
-		return
+		fmt.Fprintf(os.Stderr, "usage: ./cmd/client/main.go xxx.so inputfiles...")
+		os.Exit(1)
 	}
 
 	Sequential()

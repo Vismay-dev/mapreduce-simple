@@ -3,11 +3,15 @@ PLUGINS_DIR := ./plugins
 INTERMEDIATES_DIR := ./intermediates
 OUTPUTS_DIR := ./outputs
 
-# Files // modify as needed
+# Setup Files // modify as needed
 PLUGIN_FILE := $(PLUGINS_DIR)/wordcounter.so
 WORDCOUNTER_SRC := ./apps/wordcounter.go
-CLIENT_CMD := ./mapreduce/cmd/client/main.go
 INPUT_FILES := ./inputs/pg*.txt
+
+# CMD Files
+CLIENT_CMD := ./mapreduce/cmd/client/main.go
+WORKER_CMD := ./mapreduce/cmd/worker/main.go
+COORDINATOR_CMD := ./mapreduce/cmd/coordinator/main.go
 
 # Default target
 .PHONY: all
@@ -29,7 +33,14 @@ clean:
 	@ rm -rf ${INTERMEDIATES_DIR}
 	@ rm -rf ${OUTPUTS_DIR}
 
-# Run target: Cleans, sets up, and runs the client with the plugin and input files
+# Run target: Cleans, sets up, and runs the client with the plugin and input files (Sequential)
 .PHONY: run
 run: clean setup
 	@ go run ${CLIENT_CMD} ${PLUGIN_FILE} ${INPUT_FILES}
+
+
+# Run target: Cleans, sets up, and runs the client with the plugin and input files (Distributed)
+.PHONY: run_dist
+run_dist: clean setup
+	@ go run ${COORDINATOR_CMD} ${INPUT_FILES} &
+	@ go run ${WORKER_CMD} ${PLUGIN_FILE} 5

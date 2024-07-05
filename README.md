@@ -4,6 +4,14 @@ Simple and minimal implementation of [the MapReduce distributed computation fram
 
 MapReduce is a programming model and processing technique designed for distributed computing on large datasets. It consists of two main phases: the Map phase, which processes input files/data in parallel, and the Reduce phase, which performs a summary operation on the mapped data by key.
 
+### Status:
+
+In Progress (🚧)
+
+### Objective
+
+Building a minimum viable implementation that produces the same output as a sequential MapReduce applications + graceful exit of all forked threads / goroutines.
+
 ### Additional References:
 
 - [MapReduce](https://static.googleusercontent.com/media/research.google.com/en//archive/mapreduce-osdi04.pdf)
