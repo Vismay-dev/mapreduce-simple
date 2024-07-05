@@ -14,15 +14,15 @@ const (
 )
 
 type KeyValue struct {
-	Key string
+	Key   string
 	Value string
 }
 
 type ByKey []KeyValue
 
-func (a ByKey) Len()			int  { return len(a) }
-func (a ByKey) Less(i, j int) 	bool { return a[i].Key < a[j].Key }
-func (a ByKey) Swap(i, j int)   	 { a[i], a[j] = a[j], a[i] }
+func (a ByKey) Len() int           { return len(a) }
+func (a ByKey) Less(i, j int) bool { return a[i].Key < a[j].Key }
+func (a ByKey) Swap(i, j int)      { a[i], a[j] = a[j], a[i] }
 
 func ReadFile(filename string) (string, error) {
 	file, err := os.Open(filename)

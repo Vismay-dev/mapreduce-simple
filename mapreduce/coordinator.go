@@ -9,33 +9,31 @@ import (
 	"time"
 )
 
-
 type TaskStatus string
 
 const (
-	IDLE 		TaskStatus = "IDLE"
+	IDLE        TaskStatus = "IDLE"
 	IN_PROGRESS TaskStatus = "IN_PROGRESS"
-	COMPLETED	TaskStatus = "COMPLETED"
-	FAILED		TaskStatus = "FAILED"
+	COMPLETED   TaskStatus = "COMPLETED"
+	FAILED      TaskStatus = "FAILED"
 )
 
 type TaskInfo struct {
-	taskId		int
-	status		TaskStatus
-	fileNames 	[]string
-	assignedAt  time.Time
+	taskId     int
+	status     TaskStatus
+	fileNames  []string
+	assignedAt time.Time
 }
 
 type Coordinator struct {
-	mu		sync.Mutex
-	wg		sync.WaitGroup
+	mu sync.Mutex
+	wg sync.WaitGroup
 
-	done 	bool
+	done bool
 
-	mapTasks 	map[int]TaskInfo
- 	reduceTasks map[int]TaskInfo
+	mapTasks    map[int]TaskInfo
+	reduceTasks map[int]TaskInfo
 }
-
 
 func (c *Coordinator) monitorTaskAssignments() {
 	for {
@@ -66,7 +64,6 @@ func (c *Coordinator) server() {
 	go http.Serve(ln, nil)
 }
 
-
 // PUBLIC FUNCTIONS (API)
 
 func (c *Coordinator) Done() bool {
@@ -79,7 +76,7 @@ func StartCoordinator(input_files []string) *Coordinator {
 	c.mapTasks = make(map[int]TaskInfo, len(input_files))
 	for i, filename := range input_files {
 		taskInfo := TaskInfo{}
-		taskInfo.taskId = i+1
+		taskInfo.taskId = i + 1
 		taskInfo.status = IDLE
 		taskInfo.fileNames = []string{filename}
 		c.mapTasks[i+1] = taskInfo

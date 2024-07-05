@@ -20,7 +20,6 @@ func main() {
 	Sequential()
 }
 
-
 func Sequential() {
 	plugin := os.Args[1]
 	input_files := os.Args[2:]
@@ -61,8 +60,8 @@ func Sequential() {
 }
 
 func loadPlugin(filename string) (
-	mapf 		func(string, string)   []mapreduce.KeyValue,
-	reducef 	func(string, []string) []string,
+	mapf func(string, string) []mapreduce.KeyValue,
+	reducef func(string, []string) []string,
 ) {
 	p, err := plugin.Open(filename)
 	if err != nil {
@@ -79,8 +78,8 @@ func loadPlugin(filename string) (
 		log.Fatal("error looking plugin symbol `Reduce`: ", err)
 	}
 
-	mapf 	= xmapf.(func(string, string) []mapreduce.KeyValue)
-	reducef	= xreducef.(func(string, []string) []string)
+	mapf = xmapf.(func(string, string) []mapreduce.KeyValue)
+	reducef = xreducef.(func(string, []string) []string)
 
 	return mapf, reducef
 }
