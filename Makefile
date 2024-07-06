@@ -15,7 +15,7 @@ COORDINATOR_CMD := ./mapreduce/cmd/coordinator/main.go
 
 # Default target
 .PHONY: all
-all: run
+all: run_dist
 
 # Setup target: Creates necessary directories and builds the plugin
 .PHONY: setup
@@ -34,8 +34,8 @@ clean:
 	@ rm -rf ${OUTPUTS_DIR}
 
 # Run target: Cleans, sets up, and runs the client with the plugin and input files (Sequential)
-.PHONY: run
-run: clean setup
+.PHONY: run_seq
+run_seq: clean setup
 	@ go run ${CLIENT_CMD} ${PLUGIN_FILE} ${INPUT_FILES}
 
 

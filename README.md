@@ -8,12 +8,38 @@ MapReduce is a programming model and processing technique designed for distribut
 
 ### Status:
 
-In Progress (🚧)
+Completed (✅)
 
 ### Objective
 
 - Minimum viable implementation that produces the same output as a sequential MapReduce application.
 - Graceful exit of all forked threads / goroutines.
+
+### Usage
+
+To run distributed MapReduce (default):
+
+```
+make
+```
+
+To run sequential MapReduce (for testing/benchmarking):
+
+```
+make run_seq
+```
+
+To clean up the created directories (run as part of previous targets):
+
+```
+make clean
+```
+
+### Directory Structure
+
+- ./plugins: Directory where the compiled plugin (wordcounter) will be stored.
+- ./intermediates: Directory for storing intermediate files generated during the Map phase.
+- ./outputs: Directory for storing the final output files after the Reduce phase.
 
 ### Additional References:
 
