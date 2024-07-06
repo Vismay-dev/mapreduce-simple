@@ -43,4 +43,4 @@ run: clean setup
 .PHONY: run_dist
 run_dist: clean setup
 	@ go run ${COORDINATOR_CMD} ${INPUT_FILES} &
-	@ go run ${WORKER_CMD} ${PLUGIN_FILE} 5
+	@ go run ${WORKER_CMD} ${PLUGIN_FILE} 4

@@ -1,15 +1,26 @@
 package mapreduce
 
-import "os"
+import (
+	"os"
+	"strconv"
+)
+
+type TaskType string
+
+const (
+	REDUCE TaskType = "REDUCE"
+	MAP    TaskType = "MAP"
+)
 
 type TaskRequest struct {
 	WorkerId string
 }
 
-type TaskAssigment struct {
+type TaskAssignment struct {
 	Filenames []string
 	Type      TaskType
 	TaskId    int
+	NReduce   int
 }
 
 type TaskCompletionNotification struct {
@@ -20,11 +31,11 @@ type TaskCompletionNotification struct {
 }
 
 type TaskCompletionAck struct {
-	ack bool
+	Ack bool
 }
 
 func coordinatorSocket() string {
-	unixSockPath := "/var/tmp/mapreduce-simple-rpc.sock"
-	os.Remove(unixSockPath)
-	return unixSockPath
+	path := "/var/tmp/vismay-mapreduce-"
+	path += strconv.Itoa(os.Getuid())
+	return path
 }

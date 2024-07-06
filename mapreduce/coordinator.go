@@ -6,6 +6,7 @@ import (
 	"net"
 	"net/http"
 	"net/rpc"
+	"os"
 	"regexp"
 	"strconv"
 	"sync"
@@ -32,7 +33,8 @@ type Coordinator struct {
 	mu sync.Mutex
 	wg sync.WaitGroup
 
-	done bool
+	done    bool
+	nReduce int
 
 	mapTasks    map[int]*TaskInfo
 	reduceTasks map[int]*TaskInfo
@@ -55,7 +57,7 @@ func (c *Coordinator) monitorTaskAssignments() {
 		for taskId, taskInfo := range c.mapTasks {
 			if taskInfo.status == IN_PROGRESS && timeNow.Sub(taskInfo.assignedAt) > timeOut {
 				log.Printf(
-					"found a stuck MAP task {task-id:%d} @ {worker-id:%s}; marking it as failed",
+					"found a stuck MAP task {task-id:%d} @ {worker-id:%s}; marking it as failed\n",
 					taskId,
 					taskInfo.workerId,
 				)
@@ -67,7 +69,7 @@ func (c *Coordinator) monitorTaskAssignments() {
 		for taskId, taskInfo := range c.reduceTasks {
 			if taskInfo.status == IN_PROGRESS && timeNow.Sub(taskInfo.assignedAt) > timeOut {
 				log.Printf(
-					"found a stuck REDUCE task {task-id:%d} @ {worker-id:%s}; marking it as failed",
+					"found a stuck REDUCE task {task-id:%d} @ {worker-id:%s}; marking it as failed\n",
 					taskId,
 					taskInfo.workerId,
 				)
@@ -86,6 +88,7 @@ func (c *Coordinator) server() {
 	rpc.Register(c)
 
 	sockname := coordinatorSocket()
+	os.Remove(sockname)
 
 	ln, err := net.Listen("unix", sockname)
 	if err != nil {
@@ -119,11 +122,11 @@ func getReduceTaskId(filename string) int {
 		reduceTaskId, _ := strconv.Atoi(matches[1])
 		return reduceTaskId
 	}
-	log.Fatalf("error parsing intermediate filename: %s", filename)
+	log.Fatalf("error parsing intermediate filename: %s\n", filename)
 	return -1
 }
 
-func (c *Coordinator) createReduceTask(filename string) *TaskInfo {
+func createReduceTask(filename string) *TaskInfo {
 	task := &TaskInfo{}
 	task.status = IDLE
 	task.fileNames = []string{filename}
@@ -135,7 +138,7 @@ func (c *Coordinator) updateReduceTasks(filenames []string) {
 		id := getReduceTaskId(intermediate_file)
 		reduceTask, ok := c.reduceTasks[id]
 		if !ok {
-			c.reduceTasks[id] = c.createReduceTask(intermediate_file)
+			c.reduceTasks[id] = createReduceTask(intermediate_file)
 		} else {
 			reduceTask.fileNames = append(reduceTask.fileNames, intermediate_file)
 		}
@@ -144,7 +147,7 @@ func (c *Coordinator) updateReduceTasks(filenames []string) {
 
 // RPC INTERFACE FUNCS
 
-func (c *Coordinator) AssignTask(taskRequest *TaskRequest, taskAssignment *TaskAssigment) error {
+func (c *Coordinator) AssignTask(taskRequest *TaskRequest, taskAssignment *TaskAssignment) error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
@@ -156,13 +159,14 @@ func (c *Coordinator) AssignTask(taskRequest *TaskRequest, taskAssignment *TaskA
 			taskAssignment.Filenames = taskInfo.fileNames
 			taskAssignment.Type = MAP
 			taskAssignment.TaskId = taskId
-			fmt.Printf("MAP task {%d} assigned to {worker-id: %s}", taskAssignment.TaskId, taskInfo.workerId)
+			taskAssignment.NReduce = c.nReduce
+			fmt.Printf("MAP task {%d} assigned to {worker-id: %s}\n", taskAssignment.TaskId, taskInfo.workerId)
 			return nil
 		}
 	}
 
 	if c.mapTasksDone() {
-		for taskId, taskInfo := range c.mapTasks {
+		for taskId, taskInfo := range c.reduceTasks {
 			if taskInfo.status == IDLE || taskInfo.status == FAILED {
 				taskInfo.assignedAt = time.Now()
 				taskInfo.status = IN_PROGRESS
@@ -170,7 +174,8 @@ func (c *Coordinator) AssignTask(taskRequest *TaskRequest, taskAssignment *TaskA
 				taskAssignment.Filenames = taskInfo.fileNames
 				taskAssignment.Type = REDUCE
 				taskAssignment.TaskId = taskId
-				fmt.Printf("REDUCE task {%d} assigned to {worker-id: %s}", taskAssignment.TaskId, taskInfo.workerId)
+				taskAssignment.NReduce = c.nReduce
+				fmt.Printf("REDUCE task {%d} assigned to {worker-id: %s}\n", taskAssignment.TaskId, taskInfo.workerId)
 				return nil
 			}
 		}
@@ -186,18 +191,18 @@ func (c *Coordinator) TaskDone(notification *TaskCompletionNotification, taskDon
 	if notification.Type == MAP {
 		taskInfo := c.mapTasks[notification.TaskId]
 		if taskInfo.status == COMPLETED {
-			fmt.Printf("Completion notification received from {worker: %s} for already completed task (%d); ignoring", notification.WorkerId, notification.TaskId)
+			fmt.Printf("Completion notification received from {worker: %s} for already completed task (%d); ignoring\n", notification.WorkerId, notification.TaskId)
 		} else {
 			taskInfo.status = COMPLETED
-			fmt.Printf("MAP task {%d} @ {worker: %s} completed!", notification.TaskId, notification.WorkerId)
+			fmt.Printf("MAP task {%d} @ {worker: %s} completed!\n", notification.TaskId, notification.WorkerId)
 			c.updateReduceTasks(notification.Filenames)
 		}
-		taskDoneAck.ack = true
+		taskDoneAck.Ack = true
 	} else {
 		taskInfo := c.reduceTasks[notification.TaskId]
 		taskInfo.status = COMPLETED
-		fmt.Printf("REDUCE task {%d} @ {worker: %s} completed!", notification.TaskId, notification.WorkerId)
-		taskDoneAck.ack = true
+		fmt.Printf("REDUCE task {%d} @ {worker: %s} completed!\n", notification.TaskId, notification.WorkerId)
+		taskDoneAck.Ack = true
 	}
 
 	return nil
@@ -219,7 +224,7 @@ func (c *Coordinator) Done() bool {
 	}
 }
 
-func StartCoordinator(input_files []string) *Coordinator {
+func StartCoordinator(input_files []string, nReduce int) *Coordinator {
 	c := &Coordinator{}
 
 	c.mapTasks = make(map[int]*TaskInfo, len(input_files))
@@ -232,6 +237,7 @@ func StartCoordinator(input_files []string) *Coordinator {
 
 	c.reduceTasks = make(map[int]*TaskInfo)
 	c.done = false
+	c.nReduce = nReduce
 
 	c.server()
 

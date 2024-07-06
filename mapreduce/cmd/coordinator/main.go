@@ -16,7 +16,7 @@ func main() {
 	}
 
 	input_files := os.Args[1:]
-	c := mapreduce.StartCoordinator(input_files)
+	c := mapreduce.StartCoordinator(input_files, 8)
 
 	for !c.Done() {
 		time.Sleep(time.Second)

@@ -6,13 +6,6 @@ import (
 	"os"
 )
 
-type TaskType string
-
-const (
-	REDUCE TaskType = "REDUCE"
-	MAP    TaskType = "REDUCE"
-)
-
 type KeyValue struct {
 	Key   string
 	Value string

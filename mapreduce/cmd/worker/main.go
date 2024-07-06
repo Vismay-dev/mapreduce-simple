@@ -6,6 +6,7 @@ import (
 	"os"
 	"plugin"
 	"strconv"
+	"sync"
 
 	"github.com/Vismay-dev/mapreduce-simple/mapreduce"
 )
@@ -24,11 +25,16 @@ func main() {
 		log.Fatal("error parsing numWorkers")
 	}
 
+	var wg sync.WaitGroup
 	for i := 0; i < numWorkers; i++ {
-		go mapreduce.Worker(mapf, reducef)
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			mapreduce.Worker(mapf, reducef)
+		}()
 	}
 
-	select {}
+	wg.Wait()
 }
 
 func loadPlugin(filename string) (
