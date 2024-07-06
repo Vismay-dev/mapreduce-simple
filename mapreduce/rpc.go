@@ -17,10 +17,11 @@ type TaskRequest struct {
 }
 
 type TaskAssignment struct {
-	Filenames []string
-	Type      TaskType
-	TaskId    int
-	NReduce   int
+	Filenames   []string
+	Type        TaskType
+	TaskId      int
+	NReduce     int
+	AllComplete bool
 }
 
 type TaskCompletionNotification struct {

@@ -3,10 +3,12 @@ package main
 import (
 	"fmt"
 	"log"
+	"math/rand"
 	"os"
 	"plugin"
 	"strconv"
 	"sync"
+	"time"
 
 	"github.com/Vismay-dev/mapreduce-simple/mapreduce"
 )
@@ -30,11 +32,22 @@ func main() {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
-			mapreduce.Worker(mapf, reducef)
+			workerId := randomString(6)
+			mapreduce.RunWorker(mapf, reducef, workerId)
 		}()
 	}
 
 	wg.Wait()
+}
+
+func randomString(length int) string {
+	r := rand.New(rand.NewSource(time.Now().UnixNano()))
+	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
+	b := make([]byte, length)
+	for i := range b {
+		b[i] = charset[r.Intn(len(charset))]
+	}
+	return string(b)
 }
 
 func loadPlugin(filename string) (

@@ -6,42 +6,56 @@ import (
 	"encoding/json"
 	"fmt"
 	"log"
-	"math/rand"
 	"net/rpc"
 	"os"
 	"sort"
 	"time"
 )
 
-var workerId string
+type Worker struct {
+	workerId string
+}
 
-func Worker(
+func RunWorker(
 	mapf func(string, string) []KeyValue,
 	reducef func(string, []string) []string,
+	workerId string,
 ) {
-	workerId = randomString(6)
-	log.Printf("Started worker: {%s}", workerId)
+	worker := &Worker{}
+	worker.workerId = workerId
+	log.Printf("Started worker: {%s}", worker.workerId)
 
 	for {
-		task, err := GetTask()
+		task, err := worker.GetTask()
 		if err != nil {
 			log.Fatal("couldn't connect to coordinator, quitting...")
 			break
 		}
 
-		if task.Type == MAP {
-			runMapOp(mapf, task)
-		} else if task.Type == REDUCE {
-			runReduceOp(reducef, task)
+		if task.AllComplete {
+			log.Printf("All tasks completed. Worker %s exiting...", worker.workerId)
+			break
+		}
+
+		if tasksAssigned(task) {
+			if task.Type == MAP {
+				worker.runMapOp(mapf, task)
+			} else if task.Type == REDUCE {
+				worker.runReduceOp(reducef, task)
+			}
 		}
 
 		time.Sleep(5 * time.Second)
 	}
 }
 
-func GetTask() (*TaskAssignment, error) {
+func tasksAssigned(task *TaskAssignment) bool {
+	return len(task.Filenames) > 0
+}
+
+func (w *Worker) GetTask() (*TaskAssignment, error) {
 	taskRequest := &TaskRequest{}
-	taskRequest.WorkerId = workerId
+	taskRequest.WorkerId = w.workerId
 	taskAssignment := &TaskAssignment{}
 	if call("Coordinator.AssignTask", &taskRequest, &taskAssignment) {
 		return taskAssignment, nil
@@ -52,7 +66,7 @@ func GetTask() (*TaskAssignment, error) {
 
 // helpers
 
-func runMapOp(mapf func(string, string) []KeyValue, task *TaskAssignment) {
+func (w *Worker) runMapOp(mapf func(string, string) []KeyValue, task *TaskAssignment) {
 	if len(task.Filenames) != 1 {
 		log.Printf("expected 1 file, got %d; incorrect task assignment; ignoring", len(task.Filenames))
 		return
@@ -92,10 +106,10 @@ func runMapOp(mapf func(string, string) []KeyValue, task *TaskAssignment) {
 		intermediateFileNames[i] = intermediateOutputFilename
 	}
 
-	TaskDone(intermediateFileNames, task.TaskId, MAP)
+	w.TaskDone(intermediateFileNames, task.TaskId, MAP)
 }
 
-func runReduceOp(reducef func(string, []string) []string, task *TaskAssignment) {
+func (w *Worker) runReduceOp(reducef func(string, []string) []string, task *TaskAssignment) {
 	filenames := task.Filenames
 
 	intermediates := []KeyValue{}
@@ -138,15 +152,15 @@ func runReduceOp(reducef func(string, []string) []string, task *TaskAssignment) 
 	tmpfile.Close()
 	os.Rename(tmpfile.Name(), oname)
 
-	TaskDone([]string{oname}, task.TaskId, REDUCE)
+	w.TaskDone([]string{oname}, task.TaskId, REDUCE)
 }
 
-func TaskDone(filenames []string, taskId int, taskType TaskType) {
+func (w *Worker) TaskDone(filenames []string, taskId int, taskType TaskType) {
 	notification := &TaskCompletionNotification{}
 	notification.Filenames = filenames
 	notification.TaskId = taskId
 	notification.Type = taskType
-	notification.WorkerId = workerId
+	notification.WorkerId = w.workerId
 
 	taskDoneAck := &TaskCompletionAck{Ack: false}
 
@@ -174,15 +188,6 @@ func call(rpcname string, args interface{}, res interface{}) bool {
 
 	log.Fatal("error calling RPC service method: ", err)
 	return false
-}
-
-func randomString(length int) string {
-	const charset = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789"
-	b := make([]byte, length)
-	for i := range b {
-		b[i] = charset[rand.Intn(len(charset))]
-	}
-	return string(b)
 }
 
 func iHash(key string) int {

@@ -40,7 +40,7 @@ type Coordinator struct {
 	reduceTasks map[int]*TaskInfo
 }
 
-var timeOut = time.Second * 10
+var timeOut = time.Second * 5
 var intRegex = regexp.MustCompile("[0-9]+")
 
 func (c *Coordinator) monitorTaskAssignments() {
@@ -78,6 +78,7 @@ func (c *Coordinator) monitorTaskAssignments() {
 		}
 
 		c.mu.Unlock()
+		fmt.Printf("\n--simulating heartbeat--\n\n")
 		time.Sleep(10 * time.Second)
 	}
 	c.wg.Done()
@@ -151,6 +152,11 @@ func (c *Coordinator) AssignTask(taskRequest *TaskRequest, taskAssignment *TaskA
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
+	if c.mapTasksDone() && c.reduceTasksDone() {
+		taskAssignment.AllComplete = true
+		return nil
+	}
+
 	for taskId, taskInfo := range c.mapTasks {
 		if taskInfo.status == IDLE || taskInfo.status == FAILED {
 			taskInfo.assignedAt = time.Now()
@@ -216,6 +222,7 @@ func (c *Coordinator) Done() bool {
 		c.done = true
 		c.mu.Unlock()
 		c.wg.Wait()
+		time.Sleep(5 * time.Second)
 		return true
 	} else {
 		c.done = false
