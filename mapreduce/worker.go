@@ -13,6 +13,7 @@ func Worker(
 ) {
 	workerId = randomString(6)
 	log.Printf("Started worker: {%s}", workerId)
+
 }
 
 func randomString(length int) string {
